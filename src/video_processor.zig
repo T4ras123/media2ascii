@@ -32,5 +32,6 @@ pub fn loadVideo(allocator: std.mem.Allocator, path: []const u8) !Video {
 pub fn saveVideo(video: Video, path: []const u8) !void {
     const file = try std.fs.cwd().createFile(path, .{}) catch VideoError.FileOpenFailed;
     defer file.close();
-    try file.writeAll(video.data) catch VideoError.WriteFailed;
+
+    try file.writeAll(video.data);
 }
