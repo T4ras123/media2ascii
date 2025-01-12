@@ -1,4 +1,3 @@
-// src/main.zig
 const std = @import("std");
 const video_processor = @import("video_processor.zig");
 

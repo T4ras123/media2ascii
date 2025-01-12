@@ -4,7 +4,7 @@ pub const Video = struct {
     data: []u8,
     allocator: std.mem.Allocator,
 
-    pub fn deinit(self: *Video) void {
+    pub fn deinit(self: Video) void {
         self.allocator.free(self.data);
     }
 };
@@ -33,7 +33,7 @@ pub fn loadVideo(allocator: std.mem.Allocator, path: []const u8) !Video {
 }
 
 pub fn saveVideo(video: Video, path: []const u8) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
+    const file = try std.fs.cwd().createFile(path, .{ .truncate = true });
     defer file.close();
 
     try file.writeAll(video.data);
