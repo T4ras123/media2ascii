@@ -1,4 +1,4 @@
-- [ ] Load img
+- [x] Load img
 - [ ] Scale img down
 - [ ] Calculate luminance 
 - [ ] Map luminance to ASCII char
