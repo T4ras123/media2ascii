@@ -17,15 +17,12 @@ pub const VideoError = error{
 };
 
 pub fn loadVideo(allocator: std.mem.Allocator, path: []const u8) !Video {
-    const file = try std.fs.cwd().openFile(path, .{});
+    const file = try std.fs.cwd().openFile(path, .{}) catch VideoError.FileOpenFailed;
     defer file.close();
-
-    const file_size = try file.getEndPos();
-    const data = try allocator.alloc(u8, file_size);
+    const file_size = try file.getEndPos() catch VideoError.ReadFailed;
+    const data = try allocator.alloc(u8, file_size) catch VideoError.AllocationFailed;
     defer allocator.free(data);
-
-    _ = try file.readAll(data);
-    
+    _ = try file.readAll(data) catch VideoError.ReadFailed;
     return Video{
         .data = data,
         .allocator = allocator,
@@ -33,7 +30,9 @@ pub fn loadVideo(allocator: std.mem.Allocator, path: []const u8) !Video {
 }
 
 pub fn saveVideo(video: Video, path: []const u8) !void {
+
     const file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+
     defer file.close();
 
     try file.writeAll(video.data);
