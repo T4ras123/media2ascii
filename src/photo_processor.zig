@@ -255,6 +255,64 @@ fn loadJPEG(allocator: std.mem.Allocator, file: std.fs.File) !Image {
     };
 }
 
+pub fn saveImage(image: Image, path: []const u8) !void {
+    const file = try std.fs.cwd().createFile(path, .
+        { .truncate = true, .write = true, .read = false });
+
+    if (image.channels == 3) {
+        try file.write("\x89PNG\r\n\x1a\n");
+        try writePNG(file, image);
+    } else if (image.channels == 4) {
+        try writeJPEG(file, image);
+    } else {
+        return ImageError.UnsupportedFormat;
+    }
+}
+
+pub fn writePNG(file: std.fs.File, image: Image) !void {
+    const width = image.width;
+    const height = image.height;
+    const channels = image.channels;
+    const data = image.data;
+
+    try file.write("\x89PNG\r\n\x1a\n");
+
+    var writer = SliceWriter{
+        .data = file,
+        .pos = 0,
+    };
+
+    try writer.writeAll([_]u8{0x00, 0x00, 0x00, 0x0D});
+    try writer.writeAll("IHDR");
+    try writer.writeAll(&std.mem.toBytes(u32, width, .big));
+    try writer.writeAll(&std.mem.toBytes(u32, height, .big));
+    const value = switch (channels) {
+        1 => 0,
+        3 => 2,
+        4 => 6,
+        else => return ImageError.UnsupportedFormat,
+    };
+    try writer.writeAll(&[_]u8{ 8, value });
+
+    try writer.writeAll(&[0, 0, 0]);
+
+    try writer.writeAll(&[0x00, 0x00, 0x00, 0x00]);
+    try writer.writeAll("IDAT");
+
+    var compressed_data = std.ArrayList(u8).init(image.allocator);
+    defer compressed_data.deinit();
+
+    var out_stream = std.io.fixedBufferStream(compressed_data.items);
+
+    try std.compress.zlib.compress(&writer, out_stream.writer());
+
+    try writer.writeAll(&[0x00, 0x00, 0x00, 0x00]);
+    try writer.writeAll("IEND");
+
+    try file.flush();
+}
+
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -271,6 +329,11 @@ pub fn main() !void {
             image.height,
             image.channels
         });
+
+        try saveImage(image, "./example_saved.png") catch |err| {
+            std.debug.print("Failed to save PNG: {}\n", .{err});
+            return;
+        };
     }
 
     {
@@ -284,5 +347,11 @@ pub fn main() !void {
             image.height,
             image.channels
         });
+
+        try saveImage(image, "./example_saved.jpeg") catch |err| {
+            std.debug.print("Failed to save JPEG: {}\n", .{err});
+            return;
+        };
+        
     }
 }
